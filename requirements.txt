@@ -1,0 +1,4 @@
+scipy
+numpy
+matplotlib
+git+https://github.com/sgpinkus/device_kit.git#egg=device_kit
