@@ -34,13 +34,20 @@ def main():
     help='tolerance for convergence of solution')
   group.add_argument('--stepsize', '-l',
     dest='stepsize', type=str,
-    help='step size for fixed size gradient ascent'
+    help='step size gradient ascent. Can be an expression'
   )
   group.add_argument('--maxsteps', '-i',
     dest='maxsteps', type=int,
     help='maximum number of iterations to perform'
   )
-
+  group.add_argument('--agent-prox', '-p',
+    dest='prox',
+    help='proximal penalty for agent demand changes. Can be an expression'
+  )
+  group.add_argument('--agent-strategy', '-x',
+    dest='agent_strategy',
+    help='agent bid strategy'
+  )
   group = parser.add_argument_group('Output')
   group.add_argument('-d',
     dest='output_dir', default=None, type=str,
@@ -102,7 +109,8 @@ def load_network(scenario, network_class=None, **kwargs):
       sys.exit(1)
     print('Loaded scenario module %s.' % (scenario,))
     print('Loading network')
-    network_params = {k: v for k, v in kwargs.items() if k in ['maxsteps', 'tol', 'stepsize'] and v is not None}
+    known_network_args = ['maxiter', 'tol', 'stepsize', 'prox', 'agent_strategy']
+    network_params = {k: v for k, v in kwargs.items() if k in known_network_args and v is not None}
     if network_class is None:
       network = Network
     else:

@@ -4,24 +4,36 @@ import numpy as np
 import pandas as pd
 from scipy import linalg
 from multiprocessing import Pool
-from device_kit import DeviceSet, OptimizationException, solve
+from device_kit import DeviceSet, OptimizationException, solve, step
 from device_kit.sample_scenarios.lcl.lcl_scenario import make_deviceset
 
 
 logging.basicConfig()
 
-solver_options = {  # Default options to 'solver' - scipy.optimize.minimize - where it's used.
-  'ftol': 1e-06,
-  'maxiter': 500,
-  'disp': False,
-}
 
-
-def agent_update(x):
-  global solver_options
+def agent_point_bid_update(x):
+  solver_options = {  # Default options to 'solver' - scipy.optimize.minimize - where it's used.
+    'ftol': 1e-06,
+    'maxiter': 500,
+    'disp': False,
+  }
   (device, p, s0, prox) = x
   try:
     result = solve(device, p, s0, solver_options=solver_options, prox=prox)
+  except OptimizationException as e:
+    logging.warn('OptimizationException on %s agent :\n%s', device.id, e)
+  return result[0].reshape(device.shape)
+
+
+def agent_limited_minimization_update(x):
+  solver_options = {  # Default options to 'solver' - scipy.optimize.minimize - where it's used.
+    'ftol': 1e-06,
+    'maxiter': 500,
+    'disp': False,
+  }
+  (device, p, s0, prox) = x # TODO: Ignoring pro
+  try:
+    result = step(device, p, s0, solver_options=solver_options)
   except OptimizationException as e:
     logging.warn('OptimizationException on %s agent :\n%s', device.id, e)
   return result[0].reshape(device.shape)
@@ -42,8 +54,11 @@ class Network:
   last_demand = last_price = 0   # Internally track changes as converge to equilibrium price.
   s = 0                 # The entire flow matrix for the deviceset.
   deviceset = None
+  agent_strategy = agent_point_bid_update
 
-  def __init__(self, deviceset: DeviceSet, tol=1e-3, maxsteps=100, stepsize=1e-3, s=None, price=None,  **kwargs):
+  def __init__(self,
+    deviceset: DeviceSet, tol=1e-3, maxsteps=100, stepsize=1e-3, agent_strategy=None, s=None, price=None,  **kwargs
+  ):
     ''' Init things. kwargs hack to support deserialization mainly. '''
     self.deviceset = deviceset
     self.tol = tol
@@ -51,6 +66,7 @@ class Network:
     self.stepsize = stepsize
     self.set_price(price)
     self.set_s(s)
+    self.set_agent_strategy(agent_strategy)
     self.last_demand = np.zeros(len(self))
     self.last_price = np.zeros(len(self))
     self.logger = logging.getLogger('network')
@@ -89,7 +105,7 @@ class Network:
         (self.last_demand, self.last_price) = (self.demand, self.price)  # Stash for stability calculation.
         prox = None if self.steps == 0 else self.get_prox() # Ensure prox is 0 so demand goes to 0 price optimal on first step.
         _map = [(device, self.price, self.s[slice(*_slice),:], prox) for device, _slice in self.deviceset.slices]
-        _s = pool.map(agent_update, _map)
+        _s = pool.map(self.agent_strategy, _map)
         self.s = np.array(np.concatenate(_s)).reshape(self.deviceset.shape)
         self.update_price()
         self.steps += 1
@@ -133,6 +149,14 @@ class Network:
       if not isinstance(s, np.ndarray) or copy:
         s = np.array(s, copy=copy)
       self.s = s.reshape(self.deviceset.shape)
+
+  def set_agent_strategy(self, name):
+    if not name:
+      self.agent_strategy = agent_point_bid_update
+    elif name == 'limited_minimization':
+      self.agent_strategy = agent_limited_minimization_update
+    else:
+      raise Exception('Unkown agent update strategy "%s"' % (name,))
 
   def map(self):
     return self.deviceset.map(self.s)
