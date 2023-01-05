@@ -8,6 +8,7 @@ from matplotlib.animation import FuncAnimation, Animation
 import logging
 from logging import *
 from copy import deepcopy
+from ..network import Network
 
 
 class MatPlotNetworkWriter():
@@ -18,7 +19,7 @@ class MatPlotNetworkWriter():
 
   Has to use system call to `iconv` for GIF gen as could not get matplotlib animation to do this!
   '''
-  agent = None
+  network = None
   title = None        # Title for plot.
   fig = ax = None     # Refs to matplotlib figure and axes.
   frame_count = -1    # How many times update() has been called.
@@ -32,15 +33,15 @@ class MatPlotNetworkWriter():
   ylim  = (None, None)
   plot_globals = True
 
-  def __init__(self, agent, output_dir=None, title=None, description=None, save=True, save_animation=True, fltr=None, cb=None, each=1):
-    self.agent = agent
+  def __init__(self, network: Network, output_dir=None, title=None, description=None, save=True, save_animation=True, fltr=None, cb=None, each=1):
+    self.network = network
     self.title = title
     self.save = save
     self.save_animation = save_animation
     self.fltr = fltr
     self.cb = cb
     self.each = each
-    self.output_dir = output_dir if output_dir else'/tmp/{id}-network-animation'.format(id=agent.id)
+    self.output_dir = output_dir if output_dir else'/tmp/{id}-network-animation'.format(id=network.deviceset.id)
     if not os.path.isdir(self.output_dir):
       os.mkdir(self.output_dir)
     logging.info('Output to %s' % (output_dir,))
@@ -51,33 +52,36 @@ class MatPlotNetworkWriter():
     plt.ion()
     self.cb('after-init', plt, self) if self.cb else False
 
-  def update(self, agent, event, force=False):
-    ''' Plot price and consumption of agent. '''
+  def update(self, network, event, force=False):
+    ''' Plot price and consumption of network. '''
     self.frame_count += 1
     if self.frame_count%self.each == 0 or force:
-      self._plot(agent)
+      self._plot(network)
 
-  def _plot(self, agent):
+  def _plot(self, network):
     # Setup canvas.
     self.ax.clear()
 
     if self.plot_globals:
-      self.ax.plot(range(0, len(agent)), agent.p, color='b', label='price')
-      self.ax.plot(range(0, len(agent)), agent.r, color='r', label='demand')
+      self.ax.plot(range(0, len(network)), network.price, color='b', label='price')
+      self.ax.plot(range(0, len(network)), network.excess, color='r', label='excess')
 
-    # Plot possibly filtered list of items of agent as stacked bars.
-    items = list(self._fltr(agent, self.fltr))
-    bottom = np.zeros(len(agent))
-    neg_bottom = np.zeros(len(agent))
-    for i, a in enumerate(items):
-      (_id, r) = a
+    # Plot possibly filtered list of items of network as stacked bars.
+    df = network.df()
+    if self.fltr:
+      df_sums = df.filter(like=self.fltr, axis=0)
+    else:
+      df_sums = df.groupby(lambda l: l.split('.')[1]).sum()
+    bottom = np.zeros(len(network))
+    neg_bottom = np.zeros(len(network))
+    for (i, (label, r)) in enumerate(df_sums.iterrows()):
       use_bottom = np.choose(np.array(r < 0, dtype=int), [bottom, neg_bottom])
-      self.ax.bar(range(0, len(agent)), r, color=self._colors[i%len(self._colors)], label=_id, bottom=use_bottom)
-      neg_bottom += np.minimum(np.zeros(len(agent)), r)
-      bottom += np.maximum(np.zeros(len(agent)), r)
+      self.ax.bar(range(0, len(network)), r, color=self._colors[i%len(self._colors)], label=label, bottom=use_bottom)
+      neg_bottom += np.minimum(np.zeros(len(network)), r)
+      bottom += np.maximum(np.zeros(len(network)), r)
 
     # Setup ax meta.
-    self.ax.set_xlim(-2, len(agent)+2)
+    self.ax.set_xlim(-2, len(network)+2)
     self.ax.set_ylim(*self.ylim)
     self.ax.set_title(self.title)
     self.ax.legend(
@@ -111,12 +115,5 @@ class MatPlotNetworkWriter():
       logging.info('Not saving animation')
 
   def _make_filename(self, part, ext='png'):
-    return '%s/%s-%s%s-%s.%s' % (self.output_dir, 'animation', self.agent.id, "-" + str(self.fltr) if self.fltr else "", part, ext)
+    return '%s/%s-%s%s-%s.%s' % (self.output_dir, 'animation', self.network.deviceset.id, "-" + str(self.fltr) if self.fltr else "", part, ext)
 
-  @staticmethod
-  def _fltr(agent, fltr):
-    ''' Get all sub "items" (vectors) of agent that we want ot plot. By default plot all child items. '''
-    items = []
-    if fltr is not None:
-      return filter(lambda t: re.match('.*' + fltr + '.*', t[0]), agent.leaf_items())
-    return agent.items()

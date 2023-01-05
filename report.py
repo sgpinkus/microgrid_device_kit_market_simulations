@@ -43,9 +43,6 @@ def main():
   parser.add_argument('--movie-target', dest='fltr',
     help='generate a various PNG plots for steps of network'
   )
-  parser.add_argument('--movies', dest='movies', action='store_true',
-    help='generate a movie for all top level network agents'
-  )
   parser.add_argument('--each', '-e', dest='each', default=10, type=int,
     help='how many steps between each frame of movie'
   )
@@ -77,30 +74,16 @@ def main():
   # Generate CSV Output
   for i, network in enumerate(reader):
     df = network.df()
-    print(df)
     df.to_csv('%s/network-%d.csv' % (output_dir, i), float_format='%.5f', header=None)
 
-  # # Movie of network.
-  # if args.movie:
-  #   movie = MatPlotNetworkWriter(first, output_dir, fltr=args.fltr, each=args.each, **reader.meta)
-  #   movie.ylim = get_ylim(first, last, lambda x: movie._fltr(x, args.fltr))
-  #   for i, network in enumerate(reader):
-  #     movie.update(network, 'after-step', force=(i == len(reader)-1))
-  #   movie.close()
-  # # Movie of all network child agents.
-  # if args.movies:
-  #   # Calculate fixed ylim for series of plots in advance based on first and last.
-  #   ylims = [get_ylim(f,l, lambda x: MatPlotNetworkWriter._fltr(x, "")) for f,l in zip(first.agents, last.agents)]
-  #   for i, agent in enumerate(network.agents):
-  #     agent = network.agents[i]
-  #     movie = MatPlotNetworkWriter(agent, output_dir, each=args.each, save_animation=False, fltr="", **reader.meta)
-  #     movie.ylim = ylims[i]
-  #     for j, network in enumerate(reader):
-  #       agent = network.agents[i]
-  #       logging.info("%d %d %s", i,j, agent.id)
-  #       movie.plot_globals = False
-  #       movie.update(agent, 'after-step', force=True) #(i == len(reader)-1))
-  #     movie.close()
+  # Movie of network.
+  if args.movie:
+    movie = MatPlotNetworkWriter(first, output_dir, fltr=args.fltr, each=args.each, **reader.meta)
+    movie.ylim = get_ylim(first.s, last.s)
+    for i, network in enumerate(reader):
+      movie.update(network, 'after-step', force=(i == len(reader)-1))
+    movie.close()
+
   # Generate std set of still images.
   if args.std_plots:
     report_plots(reader, output_dir)
@@ -109,9 +92,7 @@ def main():
     report_plots_market_trends(reader, output_dir)
 
 
-def get_ylim(first, last, fltr):
-  first = np.array(list(dict(fltr(first)).values()))
-  last  = np.array(list(dict(fltr(last)).values()))
+def get_ylim(first, last):
   ymax = max(np.maximum(first, 0).sum(axis=0).max(), np.maximum(last, 0).sum(axis=0).max())*1.05
   ymin = min(np.minimum(first, 0).sum(axis=0).min(), np.minimum(last, 0).sum(axis=0).min())*1.05
   return ymin, ymax
@@ -175,6 +156,7 @@ def report_plots_market_trends(reader, output_dir):
   plt.legend()
   plt.savefig(output_dir + '/excess-demand-trend.png')
   plt.clf()
+
 
 if __name__ == '__main__':
   main()

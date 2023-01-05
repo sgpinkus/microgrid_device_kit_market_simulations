@@ -45,7 +45,7 @@ def network_to_str(network: Network, verbose=0):
   _str += '%-22s %.4f; %.4f\n' % ('utility (tot/avg)', network.u(), network.u()/num_agents)
   _str += '%-22s %.4f; %.4f\n' % ('utility[p=0] (tot/avg)', network.deviceset.u(network.s, p=zeros), network.u()/num_agents)
   _str += '%-22s %d/%d\n' % ('steps', network.steps, network.maxsteps)
-  _str += '%-22s %.6f\n' % ('stepsize', network.stepsize)
+  _str += '%-22s %.6f\n' % ('stepsize', network.get_stepsize())
   _str += '%-22s %s (thold=%.4f)\n' % ('stable', network.stable, network.tol)
   with printoptions(**np_printoptions):
     if verbose:
