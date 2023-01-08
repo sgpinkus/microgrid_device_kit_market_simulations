@@ -101,9 +101,7 @@ def load_network(scenario, network_class=None, **kwargs):
   print('Loading %s' % (scenario))
   if re.match('.*\.py$', scenario):
     try:
-      scenario = importlib.import_module(make_module_path(scenario))
-      meta = scenario.meta if hasattr(scenario, 'meta') else None
-      cb = scenario.matplot_network_writer_hook if hasattr(scenario, 'matplot_network_writer_hook') else None
+      (scenario, meta, cb) = load_scenario(scenario)
     except Exception as e:
       logger.error('Could not load scenario "%s" [%s]' % (scenario, e))
       sys.exit(1)
@@ -121,7 +119,7 @@ def load_network(scenario, network_class=None, **kwargs):
       except Exception as e:
         logger.error('Could not load network "%s" [%s]' % (network_class, e))
         sys.exit(1)
-    network = network(scenario.make_deviceset(), **network_params)
+    network = network(scenario, **network_params)
   elif re.match('.*\.json$', scenario):
     try:
       with open(scenario, 'r') as f:
@@ -141,6 +139,13 @@ def load_network(scenario, network_class=None, **kwargs):
   network.init()
   print('Initialize network done [%s]' % (network.__class__.__name__))
   return (network, meta, cb)
+
+
+def load_scenario(scenario):
+  scenario = importlib.import_module(make_module_path(scenario))
+  meta = scenario.meta if hasattr(scenario, 'meta') else None
+  cb = scenario.matplot_network_writer_hook if hasattr(scenario, 'matplot_network_writer_hook') else None
+  return (scenario.make_deviceset(), meta, cb)
 
 
 def make_module_path(s):

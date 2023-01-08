@@ -139,6 +139,9 @@ class Network:
   def u(self):
     return self.deviceset.u(self.s, self.price)
 
+  def derive(self):
+    return self.deviceset.deriv(self.s, self.price)
+
   def set_price(self, p):
     self.price = (np.ones(len(self))*p).reshape(len(self)) if p else np.zeros(len(self))
 

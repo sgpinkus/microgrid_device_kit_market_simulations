@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from device_kit_market_simulations.network import Network
 
 
-colors = ['red', 'orange', 'yellow', 'purple', 'fuchsia', 'lime', 'green', 'blue', 'navy', 'black']
+colors = plt.get_cmap('Paired', 25)
 np_printoptions = {
     'linewidth': 1e6,
     'threshold': 1e6,
