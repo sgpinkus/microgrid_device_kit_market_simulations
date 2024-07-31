@@ -2,17 +2,14 @@
 This is a simple wrapper over [device_kit](https://github.com/sgpinkus/device_kit) microgrid modelling tool, that simulates market / auction based price adjustment (or equivalently distributed gradient descent), to find an optimal resource allocation and corresponding prices. Currently only supports point bid agent strategy with an optional proximal penalty. Some convenience scripts to generate plots and gifs are included.
 
 # INSTALLATION
-Using virtualenv:
 
 ```
-virtualenv venv --python=$(which python3)
-export PYTHONPATH=$PYTHONPATH${PYTHONPATH:+:}$(dirname $(readlink -f "$f")) # You need to do this coz Python package system is stupid.
-. ./venv/bin/activate
+git clone https://github.com/sgpinkus/device_kit_market_simulations && cd device_kit_market_simulations
 pip install -r requirements.txt
 ```
 
 # USAGE
-You need `device_kit` "scenarios" which are model of day-ahead flexibility to do anything. Given a scenario:
+`run.py` runs `device_kit` "scenarios" which are model of day-ahead flexibility to do anything. Example:
 
     ./run.py device_kit/sample_scenarios/ev_charge_scenario.py -i50
 
