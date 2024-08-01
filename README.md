@@ -20,4 +20,4 @@ This more complex scenario is a variation of the scenario presented in [Li, Chen
     ./run.py scenario/lcl/lcl_scenario.py --stepsize="1/(steps+10)" --maxiter=100 --tol="5e-3" -d my-run
     ./report.py my-run --movie -v0 -e5
 
-[lcl]: (https://ieeexplore.ieee.org/abstract/document/6039082/)
+[lcl]: https://ieeexplore.ieee.org/abstract/document/6039082/
