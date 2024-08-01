@@ -1,4 +1,4 @@
-# DEVICE_KIT_MARKET_SIMULATIONS
+# MICROGRID DEVICE_KIT MARKET SIMULATIONS
 This is a simple wrapper over [device_kit](https://github.com/sgpinkus/device_kit) microgrid modelling tool, that simulates market / auction based price adjustment (or equivalently distributed gradient descent), to find an optimal resource allocation and corresponding prices. Currently only supports point bid agent strategy with an optional proximal penalty. Some convenience scripts to generate plots and gifs are included.
 
 # INSTALLATION
